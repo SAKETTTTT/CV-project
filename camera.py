@@ -10,9 +10,7 @@ model = FacialExpressionModel("model.json", "model_weights.h5")
 # Loading the classifier from the file.
 facec = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
-
 class VideoCamera(object):
-
     """ Takes the Real time Video, Predicts the Emotion using pre-trained model. """
 
     def __init__(self):
@@ -23,57 +21,38 @@ class VideoCamera(object):
 
     def get_frame(self):
         """It returns camera frames along with bounding boxes and predictions"""
-
-        # Reading the Video and grasping the Frames
         _, frame = self.video.read()
 
-        # Converting the Color image to Gray Scale
+        if frame is None:
+            # Handle case where no frame is captured (e.g., camera not available)
+            return None
+
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        # Image size is reduced by 30% at each image scale.
         scaleFactor = 1.3
-
-        # 5 neighbors should be present for each rectangle to be retained.
         minNeighbors = 5
-
-        # Detect the Faces in the given Image and store it in faces.
         faces = facec.detectMultiScale(gray_frame, scaleFactor, minNeighbors)
 
-        # Iterating through all the faces detected
         for (x, y, w, h) in faces:
-
-            # Taking the Face part in the Image as Region of Interest.
             roi = gray_frame[y:y+h, x:x+w]
-
-            # Let us resize the Image accordingly to use pretrained model.
             roi = cv2.resize(roi, (48, 48))
 
-            # Let us make the Prediction of Emotion present in the Image.
-            prediction = model.predict_emotion(
-                roi[np.newaxis, :, :, np.newaxis])
+            # The correct reshaping for a single grayscale image
+            # Shape should be (1, 48, 48, 1) -> (batch_size, height, width, channels)
+            final_roi = np.expand_dims(np.expand_dims(roi, axis=-1), axis=0)
+            
+            prediction = model.predict_emotion(final_roi)
 
-            # Defining the Parameters for putting Text on Image
             Text = str(prediction)
             Text_Color = (180, 105, 255)
-
             Thickness = 2
             Font_Scale = 1
             Font_Type = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(frame, Text, (x, y), Font_Type, Font_Scale, Text_Color, Thickness)
 
-            # Inserting the Text on Image
-            cv2.putText(frame, Text, (x, y), Font_Type,
-                        Font_Scale, Text_Color, Thickness)
-
-            # Finding the Coordinates and Radius of Circle
             xc = int((x + x+w)/2)
             yc = int((y + y+h)/2)
             radius = int(w/2)
-
-            # Drawing the Circle on the Image
             cv2.circle(frame, (xc, yc), radius, (0, 255, 0), Thickness)
 
-        # Encoding the Image into a memory buffer
         _, jpeg = cv2.imencode('.jpg', frame)
-
-        # Returning the image as a bytes object
         return jpeg.tobytes()
