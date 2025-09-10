@@ -51,7 +51,7 @@
                     uint8Array[i] = imageData.charCodeAt(i);
                 }
                 socket.emit('video_frame', uint8Array);
-            }, 100); // Send a frame every 100ms (10 frames per second)
+            }, 500);
         });
 
         // When the server sends a processed frame back, display it
