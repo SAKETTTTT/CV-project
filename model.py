@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 # To use the model saved in the Json format, We are importing "model_from_json"
-from tensorflow.keras.models import model_from_json
+from tensorflow.keras.models import model_from_json, Sequential
 
 class FacialExpressionModel(object):
 
@@ -23,7 +23,7 @@ class FacialExpressionModel(object):
             loaded_model_json = json_file.read()
 
         # Load the model architecture from JSON without compiling
-        self.loaded_model = model_from_json(loaded_model_json)
+        self.loaded_model = model_from_json(loaded_model_json, custom_objects={'Sequential': Sequential})
 
         # Now, Let us load weights into the model
         self.loaded_model.load_weights(model_weights_file)
