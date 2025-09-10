@@ -51,7 +51,7 @@
                     uint8Array[i] = imageData.charCodeAt(i);
                 }
                 socket.emit('video_frame', uint8Array);
-            }, 500);
+            }, 1000);
         });
 
         // When the server sends a processed frame back, display it
