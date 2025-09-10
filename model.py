@@ -16,7 +16,7 @@ class FacialExpressionModel(object):
                      "Surprise"]
 
     # Whenever we create an instance of class, these are initialized
-    def _init_(self, model_json_file, model_weights_file):
+    def __init__(self, model_json_file, model_weights_file):
         # Now Let us load model from JSON file which we created during Training
         with open(model_json_file, "r") as json_file:
             # Reading the json file and storing it in loaded_model
