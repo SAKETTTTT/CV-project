@@ -15,14 +15,14 @@ class FacialExpressionModel(object):
                      "Neutral", "Sad",
                      "Surprise"]
 
-    # Whenever we create an instance of class, these are initialized
+    # The __init__ method is a constructor that initializes the object with the model and weights files
     def __init__(self, model_json_file, model_weights_file):
         # Now Let us load model from JSON file which we created during Training
         with open(model_json_file, "r") as json_file:
             # Reading the json file and storing it in loaded_model
             loaded_model_json = json_file.read()
 
-        # Load the model architecture from JSON without compiling
+        # Load the model architecture from JSON, explicitly registering the Sequential class
         self.loaded_model = model_from_json(loaded_model_json, custom_objects={'Sequential': Sequential})
 
         # Now, Let us load weights into the model
