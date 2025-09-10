@@ -15,10 +15,10 @@ class VideoCamera(object):
 
     """ Takes the Real time Video, Predicts the Emotion using pre-trained model. """
 
-    def __init__(self):
+    def _init_(self):
         self.video = cv2.VideoCapture(0)
 
-    def __del__(self):
+    def _del_(self):
         self.video.release()
 
     def get_frame(self):
@@ -46,11 +46,12 @@ class VideoCamera(object):
             roi = gray_frame[y:y+h, x:x+w]
 
             # Let us resize the Image accordingly to use pretrained model.
-            roi = cv2.resize(roi, (48, 48))  # roi shape: (48, 48)
-            prediction = model.predict_emotion(
-                roi[np.newaxis, :, :, np.newaxis])
-            
+            roi = cv2.resize(roi, (48, 48))
 
+            # The next line is changed. We are reshaping the 2D ROI (48, 48)
+            # to the 4D input tensor (1, 48, 48, 1) expected by the Keras model.
+            prediction = model.predict_emotion(
+                np.expand_dims(np.expand_dims(roi, axis=-1), axis=0))
 
             # Defining the Parameters for putting Text on Image
             Text = str(prediction)
