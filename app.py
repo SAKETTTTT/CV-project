@@ -2,157 +2,62 @@
 import os
 import cv2
 import numpy as np
-from werkzeug.utils import secure_filename
-from urllib.request import Request, urlopen
-from flask import Flask, render_template, Response, request, redirect, flash, url_for
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
 
 # Importing the required Classes/Functions from Modules defined.
-from camera import VideoCamera
-from Graphical_Visualisation import Emotion_Analysis
+from model import FacialExpressionModel
 
 # Let us Instantiate the app
 app = Flask(__name__)
+# Initialize Flask-SocketIO
+socketio = SocketIO(app)
 
-###################################################################################
-# We define some global parameters so that its easier for us to tweak when required.
-
-# When serving files, we set the cache control max age to zero number of seconds
-# for refreshing the Cache
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-
-UPLOAD_FOLDER = 'static'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-###################################################################################
-# Some Utility Functions
-
-# Flask provides native support for streaming responses through the use of generator
-# functions. A generator is a special function that can be interrupted and resumed.
-
-
-def gen(camera):
-    "" "Helps in Passing frames from Web Camera to server"""
-    while True:
-        frame = camera.get_frame()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-
-
-def allowed_file(filename):
-    """ Checks the file format when file is uploaded"""
-    return ('.' in filename and
-            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS)
-
+# Load your pre-trained model and face cascade classifier
+model = FacialExpressionModel("model.json", "model_weights.h5")
+facec = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 ###################################################################################
 
 @app.route('/')
-def Start():
-    """ Renders the Home Page """
-
-    return render_template('Start.html')
-
-
-@app.route('/video_feed')
-def video_feed():
-    """ A route that returns a streamed response needs to return a Response object
-    that is initialized with the generator function."""
-
-    return Response(gen(VideoCamera()),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+def index():
+    """ Renders the real-time video streaming home page. """
+    return render_template('index.html')
 
 
-@app.route('/RealTime', methods=['POST'])
-def RealTime():
-    """ Video streaming (Real Time Image from WebCam Video) home page."""
+@socketio.on('video_frame')
+def handle_video_frame(data):
+    """
+    Handles incoming video frames from the client via WebSocket.
+    Processes the frame and sends back the result.
+    """
+    # Decode the image data sent from the client
+    frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
 
-    return render_template('RealTime.html')
+    # Convert the frame to grayscale for face detection and emotion recognition
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = facec.detectMultiScale(gray_frame, 1.3, 5)
 
+    # Process each face detected
+    for (x, y, w, h) in faces:
+        roi = gray_frame[y:y+h, x:x+w]
+        roi = cv2.resize(roi, (48, 48))
+        final_roi = np.expand_dims(np.expand_dims(roi, axis=-1), axis=0)
+        
+        # Get emotion prediction
+        prediction = model.predict_emotion(final_roi)
 
-@app.route('/takeimage', methods=['POST'])
-def takeimage():
-    """ Captures Images from WebCam, saves them, does Emotion Analysis & renders. """
+        # Draw a circle and text on the original color frame
+        cv2.putText(frame, str(prediction), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (180, 105, 255), 2)
+        cv2.circle(frame, (int((x + x+w)/2), int((y + y+h)/2)), int(w/2), (0, 255, 0), 2)
 
-    v = VideoCamera()
-    _, frame = v.video.read()
-    save_to = "static/"
-    cv2.imwrite(save_to + "capture" + ".jpg", frame)
-
-    result = Emotion_Analysis("capture.jpg")
-
-    # When Classifier could not detect any Face.
-    if len(result) == 1:
-        return render_template('NoDetection.html', orig=result[0])
-    return render_template('Visual.html', orig=result[0], pred=result[1], bar=result[2])
-
-
-@app.route('/ManualUpload', methods=['POST'])
-def ManualUpload():
-    """ Manual Uploading of Images via URL or Upload """
-
-    return render_template('ManualUpload.html')
-
-
-@app.route('/uploadimage', methods=['POST'])
-def uploadimage():
-    """ Loads Image from System, does Emotion Analysis & renders."""
-
-    if request.method == 'POST':
-
-        # Check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-
-        file = request.files['file']
-
-        # If user does not select file, browser also
-        # submit an empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-
-        # If user uploads the correct Image File
-        if file and allowed_file(file.filename):
-
-            # Pass it a filename and it will return a secure version of it.
-            # The filename returned is an ASCII only string for maximum portability.
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-            result = Emotion_Analysis(filename)
-
-            # When Classifier could not detect any Face.
-            if len(result) == 1:
-
-                return render_template('NoDetection.html', orig=result[0])
-            return render_template('Visual.html', orig=result[0], pred=result[1], bar=result[2])
-
-
-@app.route('/imageurl', methods=['POST'])
-def imageurl():
-    """ Fetches Image from URL Provided, does Emotion Analysis & renders."""
-
-    # Fetch the Image from the Provided URL
-    url = request.form['url']
-    req = Request(url,
-                  headers={'User-Agent': 'Mozilla/5.0'})
-
-    # Reading, Encoding and Saving it to the static Folder
-    webpage = urlopen(req).read()
-    arr = np.asarray(bytearray(webpage), dtype=np.uint8)
-    img = cv2.imdecode(arr, -1)
-    save_to = "static/"
-    cv2.imwrite(save_to + "url.jpg", img)
-
-    result = Emotion_Analysis("url.jpg")
-
-    # When Classifier could not detect any Face.
-    if len(result) == 1:
-        return render_template('NoDetection.html', orig=result[0])
-    return render_template('Visual.html', orig=result[0], pred=result[1], bar=result[2])
+    # Encode the processed frame back to JPEG format
+    _, jpeg = cv2.imencode('.jpg', frame)
+    
+    # Send the processed frame back to the client
+    emit('processed_frame', jpeg.tobytes())
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use SocketIO's run function to start the server
+    socketio.run(app, debug=True)
