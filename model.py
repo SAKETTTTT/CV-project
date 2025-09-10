@@ -1,4 +1,4 @@
-Let us import the Libraries required.
+# Let us import the Libraries required.
 
 import numpy as np
 import tensorflow as tf
