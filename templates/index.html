@@ -73,18 +73,21 @@
 
         // Function to capture, send, and display results
         captureBtn.addEventListener('click', () => {
-            // Set canvas dimensions to match the video feed
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-            
-            // Draw the current video frame onto the canvas
-            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-            
-            // Convert the canvas content to JPEG data
-            const dataURL = canvas.toDataURL('image/jpeg', 0.8);
-            
-            // Send the data to the server via a POST request
-            fetch('/analyze_image', {
+        // Define a new, smaller size for the canvas
+        const width = 320;
+        const height = videoElement.videoHeight / (videoElement.videoWidth / width);
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw the video frame onto the resized canvas
+        context.drawImage(videoElement, 0, 0, width, height);
+        
+        // Get the image data from the resized canvas
+        const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+        
+        // Send the smaller data to the server
+        fetch('/analyze_image', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
