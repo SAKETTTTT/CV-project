@@ -1,4 +1,4 @@
-# Let us import the Libraries required.
+Let us import the Libraries required.
 
 import numpy as np
 import tensorflow as tf
@@ -16,7 +16,7 @@ class FacialExpressionModel(object):
                      "Surprise"]
 
     # Whenever we create an instance of class, these are initialized
-    def __init__(self, model_json_file, model_weights_file):
+    def _init_(self, model_json_file, model_weights_file):
         # Now Let us load model from JSON file which we created during Training
         with open(model_json_file, "r") as json_file:
             # Reading the json file and storing it in loaded_model
@@ -25,11 +25,13 @@ class FacialExpressionModel(object):
         # Load the model architecture from JSON without compiling
         self.loaded_model = model_from_json(loaded_model_json)
 
-        # Explicitly build the model with correct input shape (batch_size=None, 48, 48, 1)
-        self.loaded_model.build(input_shape=(None, 48, 48, 1))
-
         # Now, Let us load weights into the model
         self.loaded_model.load_weights(model_weights_file)
+
+        # A "dummy" predict call to initialize the model's layers
+        # This builds the model before any real predictions are made.
+        # This is a common practice to avoid issues with lazy-loading.
+        self.loaded_model.predict(np.zeros((1, 48, 48, 1)))
 
     def predict_emotion(self, img):
         """ It predicts the Emotion using our pre-trained model and returns it """
