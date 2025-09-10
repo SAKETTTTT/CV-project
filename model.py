@@ -23,7 +23,7 @@ class FacialExpressionModel(object):
             loaded_model_json = json_file.read()
 
         # Load the model architecture from JSON without compiling
-        self.loaded_model = model_from_json(loaded_model_json, compile=False)
+        self.loaded_model = model_from_json(loaded_model_json)
 
         # Explicitly build the model with correct input shape (batch_size=None, 48, 48, 1)
         self.loaded_model.build(input_shape=(None, 48, 48, 1))
