@@ -46,11 +46,11 @@ class VideoCamera(object):
             roi = gray_frame[y:y+h, x:x+w]
 
             # Let us resize the Image accordingly to use pretrained model.
-            roi = cv2.resize(roi, (48, 48))
-
-            # Let us make the Prediction of Emotion present in the Image.
+            roi = cv2.resize(roi, (48, 48))  # roi shape: (48, 48)
             prediction = model.predict_emotion(
                 roi[np.newaxis, :, :, np.newaxis])
+            
+
 
             # Defining the Parameters for putting Text on Image
             Text = str(prediction)
