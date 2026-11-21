@@ -29,6 +29,9 @@ def analyze_image():
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = facec.detectMultiScale(gray_frame, 1.3, 5)
 
+    # Default result when no face is found (otherwise `prediction` would be undefined)
+    prediction = "No face detected"
+
     # Process each face detected
     for (x, y, w, h) in faces:
         roi = gray_frame[y:y+h, x:x+w]
@@ -53,4 +56,5 @@ def analyze_image():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Debug mode exposes an interactive debugger, so it is opt-in: FLASK_DEBUG=1 python app.py
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")

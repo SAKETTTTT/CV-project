@@ -10,7 +10,7 @@ in the test function’s definition.
 """
 
 import pytest
-from main import app as flask_app
+from app import app as flask_app
 
 
 @pytest.fixture
